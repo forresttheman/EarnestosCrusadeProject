@@ -29,6 +29,7 @@ screen_scroll = 0
 bg_scroll = 0
 level = 1
 start_game = False
+char_select = 0
 
 
 #define player action variables
@@ -53,7 +54,7 @@ sky_img = pygame.image.load('img/background/sky_cloud.png').convert_alpha()
 
 #money img
 money_img = pygame.image.load('img/icons/currency.png').convert_alpha()
-
+money_img = pygame.transform.rotate(money_img, -90)
 
 #store tiles in a list
 img_list = []
@@ -61,7 +62,8 @@ for x in range(TILE_TYPES):
 	img = pygame.image.load(f'img/tile/{x}.png')
 	img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
 	img_list.append(img)
-#bullet
+
+#bullets
 bullet_img = pygame.image.load('img/icons/bullet.png').convert_alpha()
 #grenade
 grenade_img = pygame.image.load('img/icons/grenade.png').convert_alpha()
@@ -77,6 +79,7 @@ item_boxes = {
 	'Grenade'	: grenade_box_img,
   'Money'   : money_box_img
 }
+choose_img = pygame.image.load('img/buttons/select_btn.png').convert_alpha()
 
 
 #define colours
@@ -89,8 +92,8 @@ BLACK = (0, 0, 0)
 #define font
 font = pygame.font.SysFont('Futura', 30)
 
-def draw_text(text, font, text_col, x, y):
-	img = font.render(text, True, text_col)
+def draw_text(text, font, text_col, x, y, size):
+	img = font.render(text * size, True, text_col)
 	screen.blit(img, (x, y))
 
 
@@ -123,8 +126,8 @@ def reset_level():
 
 	return data
 
-
-
+###################################################################
+###################################################################
 
 class Soldier(pygame.sprite.Sprite):
 	def __init__(self, char_type, x, y, scale, speed, ammo, grenades):
@@ -169,10 +172,10 @@ class Soldier(pygame.sprite.Sprite):
 			temp_list = []
 
 			#count number of files in the folder
-			num_of_frames = len(os.listdir(f'img/{self.char_type}/{animation}'))
+			num_of_frames = len(os.listdir(f'img/{self.char_type}/soldier/{animation}'))
 
 			for i in range(num_of_frames):
-				img = pygame.image.load(f'img/{self.char_type}/{animation}/{i}.png').convert_alpha()
+				img = pygame.image.load(f'img/{self.char_type}/soldier/{animation}/{i}.png').convert_alpha()
 				img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
 				temp_list.append(img)
 			self.animation_list.append(temp_list)
@@ -557,7 +560,6 @@ class HealthBar():
 		pygame.draw.rect(screen, GREEN, (self.x, self.y, 150 * ratio, 20))
 
 ##################################################################
-##################################################################
 
 class Bullet(pygame.sprite.Sprite):
 	def __init__(self, x, y, direction):
@@ -755,6 +757,9 @@ start_button = button.Button(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT // 2 - 150, 
 exit_button = button.Button(SCREEN_WIDTH // 2 - 110, SCREEN_HEIGHT // 2 + 50, exit_img, 1)
 restart_button = button.Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, restart_img, 2)
 
+#char select buttons
+elite_button = button.Button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 + 150, choose_img, 1)
+soldier_button = button.Button(SCREEN_WIDTH // 2 - 375, SCREEN_HEIGHT // 2 + 150, choose_img, 1)
 
 #create sprite groups
 enemy_group = pygame.sprite.Group()
@@ -796,176 +801,198 @@ while run:
 
 	clock.tick(FPS)
 
-	if start_game == False:
-		#draw menu
+
+	#draw menu
+	screen.fill(BG)
+	#add buttons
+	if start_button.draw(screen):
+		start_game = True
+
+	if exit_button.draw(screen):
+		run = False
+
+	if start_game:
 		screen.fill(BG)
-		#add buttons
-		if start_button.draw(screen):
-			start_game = True #add another layer for character selection using buttons
+    #draw selection buttons: two at this point: soldier + elite
+    #add animated previews of the character types above their buttons
+		draw_text("Soldier", font, BLACK, SCREEN_WIDTH // 2 - 300, SCREEN_WIDTH // 2 + 50, 3)
+		if soldier_button.draw(screen):
+			char_select = 1
 
-		if exit_button.draw(screen):
-			run = False
+		draw_text("Elite", font, BLACK, SCREEN_WIDTH // 2 + 170, SCREEN_WIDTH // 2 + 50, 3)
+		if elite_button.draw(screen):
+			char_select = 2
+		
+		if char_select == 1:
+			pass
+			#default is soldier
+		elif char_select == 2:
+			#player has chosen elite
+			pass
 
+#start the game
+	if start_game == True and char_select != 0:
+			#update background
+			draw_bg()
+			#draw world map
+			world.draw()
 
-	else:
-		#update background
-		draw_bg()
-		#draw world map
-		world.draw()
-		#show player health
-		health_bar.draw(player.health)
+			#show player health
+			health_bar.draw(player.health)
 
-		#show ammo
-		draw_text('AMMO: ', font, WHITE, 10, 35)
-		for x in range(player.ammo):
-			screen.blit(bullet_img, (90 + (x * 10), 40))
+			#show ammo
+			draw_text('AMMO: ', font, WHITE, 10, 35, 1)
+			for x in range(player.ammo):
+				screen.blit(bullet_img, (90 + (x * 10), 40))
 
-		#show grenades
-		draw_text('GRENADES: ', font, WHITE, 10, 60)
-		for x in range(player.grenades):
-			screen.blit(grenade_img, (135 + (x * 15), 60))
+			#show grenades
+			draw_text('GRENADES: ', font, WHITE, 10, 60, 1)
+			for x in range(player.grenades):
+				screen.blit(grenade_img, (135 + (x * 15), 60))
     
-    #show currency
-		draw_text(f'MONEY: {player.currency}', font, WHITE, 10, 85)
-		if player.currency <=  99:
-			screen.blit(money_img, (125, 80))
-		elif player.currency >= 100:
-			for i in range(2):
-				screen.blit(money_img,(135+(7*i), 80))
+			#show currency
+			draw_text(f'MONEY: {player.currency}', font, WHITE, 10, 85, 1)
+			if player.currency <=  99:
+				screen.blit(money_img, (123, 83))
+			elif player.currency >= 100:
+				for i in range(2):
+					screen.blit(money_img,(135+(7*i), 83))
 
 
-		#draw player and update based on user input
-		player.update()
-		player.draw()
+			#draw player and update based on user input
+			player.update()
+			player.draw()
 
-		for enemy in enemy_group:#iterate though enemys and update them, draw them, and add ai
-			enemy.ai()
-			enemy.update()
-			enemy.draw()
+			for enemy in enemy_group:#iterate though enemys and update them, draw them, and add ai
+				enemy.ai()
+				enemy.update()
+				enemy.draw()
 
-		#update and draw groups
-		bullet_group.update()
-		grenade_group.update()
-		explosion_group.update()
-		item_box_group.update()
+			#update and draw groups
+			bullet_group.update()
+			grenade_group.update()
+			explosion_group.update()
+			item_box_group.update()
 
-		decoration_group.update()
-		water_group.update()
-		exit_group.update()
-		coin_group.update()
+			decoration_group.update()
+			water_group.update()
+			exit_group.update()
+			coin_group.update()
 
 
-		bullet_group.draw(screen)
-		grenade_group.draw(screen)
-		explosion_group.draw(screen)
-		item_box_group.draw(screen)
+			bullet_group.draw(screen)
+			grenade_group.draw(screen)
+			explosion_group.draw(screen)
+			item_box_group.draw(screen)
 
-		decoration_group.draw(screen)
-		water_group.draw(screen)
-		exit_group.draw(screen)
-		coin_group.draw(screen)
+			decoration_group.draw(screen)
+			water_group.draw(screen)
+			exit_group.draw(screen)
+			coin_group.draw(screen)
 
-		#update player actions
-		if player.alive:
-			#shoot bullets
-			if shoot:
-				player.shoot()
+			#update player actions
+			if player.alive:
+				#shoot bullets
+				if shoot:
+					player.shoot()
 
-			#throw grenades
-			elif grenade and grenade_thrown == False and player.grenades > 0:
-				grenade = Grenade(player.rect.centerx + (0.5 * player.rect.size[0] * player.direction),\
+				#throw grenades
+				elif grenade and grenade_thrown == False and player.grenades > 0:
+					grenade = Grenade(player.rect.centerx + (0.5 * player.rect.size[0] * player.direction),\
 				 			player.rect.top, player.direction)
-				grenade_group.add(grenade)
-				#reduce grenades
-				player.grenades -= 1
-				grenade_thrown = True
+					grenade_group.add(grenade)
+					#reduce grenades
+					player.grenades -= 1
+					grenade_thrown = True
 
 
-			if player.in_air:
-				player.update_action(2)#2: jump
+				if player.in_air:
+					player.update_action(2)#2: jump
 
-			elif moving_left or moving_right:
-				player.update_action(1)#1: run
+				elif moving_left or moving_right:
+					player.update_action(1)#1: run
 
+				else:
+					player.update_action(0)#0: idle
+
+				screen_scroll, level_complete, player.currency = player.move(moving_left, moving_right)
+				bg_scroll -= screen_scroll
+
+
+				#check if player has completed the level
+				if level_complete:
+					level += 1
+					bg_scroll = 0
+					world_data = reset_level()
+					money.append(player.currency)
+
+					if level <= MAX_LEVELS:#stops from loading in nonexistent levels
+						#load in level data and create world
+						with open(f'level{level}_data.csv', newline='') as csvfile:
+							reader = csv.reader(csvfile, delimiter=',')
+							for x, row in enumerate(reader):
+								for y, tile in enumerate(row):
+									world_data[x][y] = int(tile)
+
+						world = World()
+						player, health_bar = world.process_data(world_data)
+          	#making the payer's money able to survive lvl changes
+						player.currency = money[0]
+    
+    	#if player is dead or in any other state
 			else:
-				player.update_action(0)#0: idle
+				screen_scroll = 0
+        #clear coins from screen when you die
+				coin_group.empty()
 
-			screen_scroll, level_complete, player.currency = player.move(moving_left, moving_right)
-			bg_scroll -= screen_scroll
+				if restart_button.draw(screen):
+					bg_scroll = 0
+					world_data = reset_level()
 
-
-			#check if player has completed the level
-			if level_complete:
-				level += 1
-				bg_scroll = 0
-				world_data = reset_level()
-				money.append(player.currency)
-
-				if level <= MAX_LEVELS:#stops from loading in nonexistent levels
 					#load in level data and create world
 					with open(f'level{level}_data.csv', newline='') as csvfile:
-						reader = csv.reader(csvfile, delimiter=',')
+						reader = csv.reader(csvfile, delimiter=',')#delimiter is what the program takes as the boundrary of one piece of data from the next
 						for x, row in enumerate(reader):
 							for y, tile in enumerate(row):
 								world_data[x][y] = int(tile)
 
-					world = World()
+					world = World() #reset world with new data
 					player, health_bar = world.process_data(world_data)
-          #making the payer's money able to survive lvl changes
-					player.currency = money[0]
-    
-    #if player is dead or in any other state
-		else:
-			screen_scroll = 0
-
-			if restart_button.draw(screen):
-				bg_scroll = 0
-				world_data = reset_level()
-
-				#load in level data and create world
-				with open(f'level{level}_data.csv', newline='') as csvfile:
-					reader = csv.reader(csvfile, delimiter=',')#delimiter is what the program takes as the boundrary of one piece of data from the next
-					for x, row in enumerate(reader):
-						for y, tile in enumerate(row):
-							world_data[x][y] = int(tile)
-
-				world = World() #reset world with new data
-				player, health_bar = world.process_data(world_data)
 
 
 
 
-  ###################
-  ###EVENT HANDLER###
-  ###################
+  	###################
+  	###EVENT HANDLER###
+  	###################
 
 	for event in pygame.event.get():
 		#quit game
 		if event.type == pygame.QUIT:
-			run = False
-
-		#keyboard presses
-		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_a:
-				moving_left = True
-
-			if event.key == pygame.K_d:
-				moving_right = True
-
-			if event.key == pygame.K_SPACE:
-				shoot = True
-
-			if event.key == pygame.K_q:
-				grenade = True
-
-			if event.key == pygame.K_w and player.alive:
-				player.jump = True
-
-			if event.key == pygame.K_ESCAPE:
 				run = False
 
+			#keyboard presses
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_a:
+					moving_left = True
 
-		#keyboard button released
+			if event.key == pygame.K_d:
+					moving_right = True
+
+			if event.key == pygame.K_SPACE:
+					shoot = True
+
+			if event.key == pygame.K_q:
+					grenade = True
+
+			if event.key == pygame.K_w and player.alive:
+					player.jump = True
+
+			if event.key == pygame.K_ESCAPE:
+					run = False
+
+
+			#keyboard button released
     #this makes it so you may do these actions over many presses
 		if event.type == pygame.KEYUP:
 			if event.key == pygame.K_a:
@@ -987,11 +1014,11 @@ while run:
 pygame.quit()
 
 #REMINDERS:
-#add two more fully animated classes: wizard and archer
 #add a shop + upgrades (BIG CHANGES!)
 
 #IN PROGRESS:
 #add a health bar for enemies using a group
+#add two more fully animated classes: wizard and archer (plus easter egg halo elite w energy sword)
 
 #DONE:
 #add currency
@@ -1002,4 +1029,36 @@ pygame.quit()
 #look at how the buttons were imported. See if i can make every single class the same as that for easier access and less of an annoyingly long block of code
 #problems that have arisen:
 #classes reference returned or global vars inside and cannot be modified easily
+#circular import breaks pygame
 
+#find sprite sheets for archer and wizard
+
+#ELITE:#
+#need animations:#
+#standby w energy sword, 
+#standby w plasma rifle, 
+#death, 
+#jump, 
+#energy sword lunge (add a method in elite class for this action), 
+#plasma rifle shoot animation
+#plasma rifle overheat animation
+#plasma rifle vent animation
+
+#need sounds:#
+#energy sword buzz for standby
+#energy sword zap for overheat
+#energy sword zap for attack
+#plasma rifle firing 
+#plasma rifle overheat noise
+#plasma rifle vent noise
+
+#need features:#
+#way to switch weapons (no animation needed)
+#cannot pick up weapons or ammo. does not use grenades, and instead has a special weapon called a brute shot that fires 1-6 rounds before having to pick up more ammo
+#use the existing ammo crates for brute shot ammo
+#does not need ammo,but weapons overheat and have a cooldown period if used too much
+
+#ideas for overheat: 
+#PLASMA RIFLE: as long as the firing key is being pressed, a counter increases. when that counter hits a certain point, the action of the plasma rifle is changed to overheat. the player has the option at any point to vent it, triggering a new animation and cooling the weapon down.
+#ENERGY SWORD: energy sword will work differently, because it doesn't shoot. Whenever it hits an enemy, a counter is increased, by increments of 25%. when it hits that 100%, overheat is triggered and the weapon must cool down to 0% again to be used. the energy sword cannot be vented,just cooled down.
+#maybe have a bar below health that shows how hot the weapon is. use something like the health bar class, but with different colors.
