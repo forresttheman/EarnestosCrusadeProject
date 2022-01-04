@@ -79,7 +79,10 @@ item_boxes = {
 	'Grenade'	: grenade_box_img,
   'Money'   : money_box_img
 }
+#other
 choose_img = pygame.image.load('img/buttons/select_btn.png').convert_alpha()
+soldier_idle0_img = pygame.image.load('img/player/soldier/idle/0.png').convert_alpha()
+elite_idle0_img = pygame.image.load('img/player/elite/idle/0.png').convert_alpha()
 
 
 #define colours
@@ -466,7 +469,6 @@ class Decoration(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.midtop = (x + TILE_SIZE // 2, y + (TILE_SIZE - self.image.get_height()))
 
-
 	def update(self):
 		self.rect.x += screen_scroll
 
@@ -481,7 +483,6 @@ class Water(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.midtop = (x + TILE_SIZE // 2, y + (TILE_SIZE - self.image.get_height()))
 
-
 	def update(self):
 		self.rect.x += screen_scroll
 
@@ -495,7 +496,6 @@ class Exit(pygame.sprite.Sprite):
 		self.image = img
 		self.rect = self.image.get_rect()
 		self.rect.midtop = (x + TILE_SIZE // 2, y + (TILE_SIZE - self.image.get_height()))
-
 
 	def update(self):
 		self.rect.x += screen_scroll
@@ -749,6 +749,56 @@ class Money(pygame.sprite.Sprite):
 				self.kill()
 				money.clear()
 
+##################################################################
+class AnimatedPreview(pygame.sprite.Sprite):
+	def __init__(self, x, y, char_type, scale):
+		pygame.sprite.Sprite.__init__(self)
+
+		self.frame_index = 0
+		self.char_type = char_type
+		self.idle_animation_list = []
+		self.update_counter = 0
+
+		#load images
+		if char_type == 'soldier':
+			num_of_frames = len(os.listdir(f'img/player/{self.char_type}/idle'))
+			temp_list = []
+			for i in range(num_of_frames):
+				img = pygame.image.load(f'img/player/{self.char_type}/idle/{i}.png').convert_alpha()
+				img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+				temp_list.append(img)
+			self.idle_animation_list.append(temp_list)
+			
+		elif char_type == 'elite':
+			num_of_frames = len(os.listdir(f'img/player/{self.char_type}/idle'))
+			temp_list = []
+			for i in range(num_of_frames):
+				img = pygame.image.load(f'img/player/{self.char_type}/idle/{i}.png').convert_alpha()
+				img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+				temp_list.append(img)
+			self.idle_animation_list.append(temp_list)
+
+		self.image = self.idle_animation_list[0][self.frame_index]
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+
+    #add basic animation: iterate through the idle list and make self.image = self.idle_animation_list[0]the first temp list at[self.frame_index]
+		def update(self):
+			self.animation_cooldown = 4
+
+			if self.update_counter >= self.animation_cooldown:
+				self.update_counter = 0
+				self.frame_index += 1
+				if self.frame_index >= len(os.listdir(f'img/player/{self.char_type}/idle')):
+					self.frame_index = 0
+
+			else:
+				self.animation_counter += 1
+				self.frame_index += 1
+
+			self.image = self.idle_animation_list[0][self.frame_index]
+
 
 #<END CLASSES>#
 
@@ -776,6 +826,12 @@ coin_group = pygame.sprite.Group()
 
 #money list saves through levels
 money = []
+
+#define previews
+soldier_preview = AnimatedPreview(SCREEN_WIDTH // 2 - 300, SCREEN_WIDTH - 650, 'soldier', 8)
+elite_preview = AnimatedPreview(SCREEN_WIDTH // 2 + 150, SCREEN_WIDTH - 630, 'elite', 7)
+#preview group
+preview_group = pygame.sprite.Group()
 
 #starting world instance data
 #create empty tile list
@@ -815,6 +871,12 @@ while run:
 		screen.fill(BG)
     #draw selection buttons: two at this point: soldier + elite
     #add animated previews of the character types above their buttons
+		preview_group.add(soldier_preview)
+		preview_group.add(elite_preview)
+
+		preview_group.update()
+		preview_group.draw(screen)
+    
 		draw_text("Soldier", font, BLACK, SCREEN_WIDTH // 2 - 300, SCREEN_WIDTH // 2 + 50, 3)
 		if soldier_button.draw(screen):
 			char_select = 1
@@ -829,6 +891,7 @@ while run:
 		elif char_select == 2:
 			#player has chosen elite
 			pass
+
 
 #start the game
 	if start_game == True and char_select != 0:
